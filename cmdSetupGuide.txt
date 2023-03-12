@@ -1,0 +1,111 @@
+# Create an AWS EC2 Instance
+
+# Go to AWS EC2 Dashboard in your AWS Console and start the launch instance wizard.
+
+# Select Ubuntu Server 20.04 AMI or any Ubuntu distribution of your like.
+
+# Choose t2.micro as the desired instance type. (because it's free)
+
+# Configure the instance details as you like. (I used the default VPC settings). 
+
+# Add storage, 8 GB is more than what we need for this example.
+
+# Add a Name tag, this is the name of the EC2 instance. Key = Name; value = prometheus-server.
+
+# Configure a security group (firewall rules). Port 22 for SSH, port 9090 for Prometheus, port 9100 for Prometheus Node Exporter and finally, port 9093 for the Alertmanager. For this example, we are going to use a single Security Group for all the AWS EC2 instances to keep it simple.
+
+# Review the instance.
+
+# Create a new key pair(.pem file) and download the private key file. This is the only time you will be able to download the private key file. If you lose it, you will have to create a new key pair and download the private key file again.
+
+# Launch the instance.
+
+# Get the Public DNS of the AWS EC2 instance. You can find it in the AWS EC2 Dashboard. It will look something like this: ec2-3-17-28.53.us-east-2.compute.amazonaws.com
+
+# SSH into the AWS EC2 instance using the private key file and the Public DNS. Assume the private key file is named prometheus.pem and the Public DNS is ec2-3-17-28.53.us-east-2.compute.amazonaws.com.
+
+# Use this command: ssh -i prometheus.pem ubuntu@ec2-3-17-28.53.us-east-2.compute.amazonaws.com
+
+# Note: It is recommended to create a different user than root to run specific services. This will help to isolate Prometheus and add protection to the system. In this example, we are going to create a user named prometheus.
+
+
+## set up user and directories for prometheus
+
+sudo useradd --no-create-home prometheus
+sudo mkdir /etc/prometheus
+sudo mkdir /var/lib/prometheus
+
+## Download and unarchive prometheus
+wget https://github.com/prometheus/prometheus/releases/download/v2.38.0/prometheus-2.38.0.linux-amd64.tar.gz
+tar xvfz prometheus-2.38.0.linux-amd64.tar.gz
+
+
+## copy unarchived files to binaries folder
+sudo cp prometheus-2.38.0.linux-amd64/prometheus /usr/local/bin
+sudo cp prometheus-2.38.0.linux-amd64/promtool /usr/local/bin/
+sudo cp -r prometheus-2.38.0.linux-amd64/consoles /etc/prometheus
+sudo cp -r prometheus-2.38.0.linux-amd64/console_libraries /etc/prometheus
+sudo cp prometheus-2.38.0.linux-amd64/promtool /usr/local/bin
+
+## clean up
+rm -rf prometheus-2.38.0.linux-amd64.tar.gz prometheus-2.38.0.linux-amd64
+
+## create prometheus.yml
+sudo nano /etc/prometheus/prometheus.yml
+
+## create config for prometheus service
+sudo nano /etc/systemd/system/prometheus.service
+
+## change file and folder permissions
+sudo chown prometheus:prometheus /etc/prometheus
+sudo chown prometheus:prometheus /usr/local/bin/prometheus
+sudo chown prometheus:prometheus /usr/local/bin/promtool
+sudo chown -R prometheus:prometheus /etc/prometheus/consoles
+sudo chown -R prometheus:prometheus /etc/prometheus/console_libraries
+sudo chown -R prometheus:prometheus /var/lib/prometheus
+
+## Enable and start prometheus
+sudo systemctl daemon-reload
+sudo systemctl enable prometheus
+sudo systemctl restart prometheus
+sudo systemctl status prometheus
+
+## Install Alert Manager
+sudo useradd -M -r -s /bin/false alertmanager
+sudo mkdir /var/lib/alertmanager
+sudo mkdir /etc/alertmanager
+
+wget https://github.com/prometheus/alertmanager/releases/download/v0.24.0/alertmanager-0.24.0.linux-amd64.tar.gz
+tar xvfz alertmanager-0.24.0.linux-amd64.tar.gz
+
+sudo cp alertmanager-0.24.0.linux-amd64/alertmanager /usr/local/bin
+sudo cp alertmanager-0.24.0.linux-amd64/amtool /usr/local/bin/
+sudo cp alertmanager-0.24.0.linux-amd64/alertmanager.yml /etc/alertmanager/
+
+sudo chown alertmanager:alertmanager /etc/alertmanager/alertmanager.yml
+sudo chown alertmanager:alertmanager /usr/local/bin/alertmanager
+
+rm -rf alertmanager*
+
+## Edit alertmanager.yml
+sudo nano /etc/alertmanager/alertmanager.yml
+
+amtool check-config /etc/alertmanager/alertmanager.yml
+
+## alertmanager service
+sudo nano /etc/systemd/system/alertmanager.service
+sudo systemctl daemon-reload 
+sudo systemctl enable --now alertmanager.service 
+sudo systemctl status alertmanager.service 
+
+## alert rules
+sudo nano /etc/prometheus/rules.yml
+cat /etc/prometheus/rules.yml
+
+sudo chown -R prometheus:prometheus /etc/prometheus
+
+sudo systemctl daemon-reload
+sudo systemctl restart prometheus.service
+sudo systemctl restart alertmanager.service 
+sudo systemctl status alertmanager.service
+sudo systemctl status prometheus.service
