@@ -24,7 +24,9 @@
 
 # SSH into the AWS EC2 instance using the private key file and the Public DNS. Assume the private key file is named prometheus.pem and the Public DNS is ec2-3-17-28.53.us-east-2.compute.amazonaws.com.
 
-# Use this command: ssh -i prometheus.pem ubuntu@ec2-3-17-28.53.us-east-2.compute.amazonaws.com
+# Navigate to the directory where the private key file is located and ssh it. Else you can specify the path to the private key file in the command. 
+
+# To ssh, use this command: ssh -i prometheus.pem ubuntu@ec2-3-17-28.53.us-east-2.compute.amazonaws.com
 
 # Note: It is recommended to create a different user than root to run specific services. This will help to isolate Prometheus and add protection to the system. In this example, we are going to create a user named prometheus.
 
